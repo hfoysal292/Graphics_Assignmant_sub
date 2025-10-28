@@ -1,0 +1,198 @@
+#ifdef __APPLE__
+    #include <GLUT/glut.h>
+#else
+    #include <GL/glut.h>
+#endif
+
+#include <iostream>
+#include <vector>
+#include <algorithm>
+using namespace std;
+
+
+
+
+float xmin_win;
+float ymin_win;
+float xmax_win;
+float ymax_win;
+
+const int WINDOW_W = 600;
+const int WINDOW_H = 600;
+
+
+struct Point2D {
+    float x;
+    float y;
+};
+
+
+struct Segment {
+    Point2D p1;
+    Point2D p2;
+};
+
+
+vector<Segment> segments;
+
+
+bool liangBarskyClip(
+    float x1, float y1,
+    float x2, float y2,
+    float xmin, float ymin,
+    float xmax, float ymax,
+    float &cx1, float &cy1,
+    float &cx2, float &cy2
+)
+{
+    float dx = x2 - x1;
+    float dy = y2 - y1;
+
+    float u1 = 0.0f;
+    float u2 = 1.0f;
+
+    auto clipTest = [&](float p, float q) -> bool {
+        if (p == 0.0f) {
+
+            if (q < 0.0f) return false;
+            return true;
+        }
+
+        float r = q / p;
+
+        if (p < 0.0f) {
+            // entering boundary
+            if (r > u2) return false;
+            if (r > u1) u1 = r;
+        } else {
+            // p > 0.0f, leaving boundary
+            if (r < u1) return false;
+            if (r < u2) u2 = r;
+        }
+        return true;
+    };
+
+    // left:   x >= xmin  -> -dx * u <= x1 - xmin
+    if (!clipTest(-dx, x1 - xmin)) return false;
+    // right:  x <= xmax  ->  dx * u <= xmax - x1
+    if (!clipTest( dx, xmax - x1)) return false;
+    // bottom: y >= ymin  -> -dy * u <= y1 - ymin
+    if (!clipTest(-dy, y1 - ymin)) return false;
+    // top:    y <= ymax  ->  dy * u <= ymax - y1
+    if (!clipTest( dy, ymax - y1)) return false;
+
+    if (u2 < u1) return false;
+
+    cx1 = x1 + u1 * dx;
+    cy1 = y1 + u1 * dy;
+    cx2 = x1 + u2 * dx;
+    cy2 = y1 + u2 * dy;
+    return true;
+}
+
+void drawRect(float xmin, float ymin, float xmax, float ymax)
+{
+    glBegin(GL_LINE_LOOP);
+        glVertex2f(xmin, ymin);
+        glVertex2f(xmax, ymin);
+        glVertex2f(xmax, ymax);
+        glVertex2f(xmin, ymax);
+    glEnd();
+}
+
+void drawLine(float x1, float y1, float x2, float y2)
+{
+    glBegin(GL_LINES);
+        glVertex2f(x1, y1);
+        glVertex2f(x2, y2);
+    glEnd();
+}
+
+
+void display()
+{
+    glClear(GL_COLOR_BUFFER_BIT);
+
+    glColor3f(1.0f, 1.0f, 1.0f);
+    drawRect(xmin_win, ymin_win, xmax_win, ymax_win);
+
+
+    for (const auto &seg : segments)
+    {
+        float x1 = seg.p1.x;
+        float y1 = seg.p1.y;
+        float x2 = seg.p2.x;
+        float y2 = seg.p2.y;
+
+
+        glColor3f(1.0f, 0.0f, 0.0f);
+        drawLine(x1, y1, x2, y2);
+
+
+        float cx1, cy1, cx2, cy2;
+        bool visible = liangBarskyClip(
+            x1, y1, x2, y2,
+            xmin_win, ymin_win, xmax_win, ymax_win,
+            cx1, cy1, cx2, cy2
+        );
+
+
+        if (visible) {
+            glColor3f(0.0f, 1.0f, 0.0f);
+            drawLine(cx1, cy1, cx2, cy2);
+        }
+    }
+
+    glFlush();
+}
+
+
+
+void initGL()
+{
+
+    glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+
+    glMatrixMode(GL_PROJECTION);
+    glLoadIdentity();
+
+
+    gluOrtho2D(0.0, WINDOW_W, 0.0, WINDOW_H);
+
+    glMatrixMode(GL_MODELVIEW);
+    glLoadIdentity();
+}
+
+int main(int argc, char** argv)
+{
+
+    cout << "Enter clipping window (xmin ymin xmax ymax): ";
+    cin  >> xmin_win >> ymin_win >> xmax_win >> ymax_win;
+
+
+    segments.clear();
+    segments.resize(3);
+
+    cout << "You will enter 3 line segments.\n";
+    for (int i = 0; i < 3; i++) {
+        cout << "Segment " << (i+1)
+             << " (x1 y1 x2 y2): ";
+        cin >> segments[i].p1.x
+            >> segments[i].p1.y
+            >> segments[i].p2.x
+            >> segments[i].p2.y;
+    }
+
+
+    glutInit(&argc, argv);
+    glutInitDisplayMode(GLUT_SINGLE | GLUT_RGB);
+    glutInitWindowSize(WINDOW_W, WINDOW_H);
+    glutInitWindowPosition(100, 100);
+    glutCreateWindow("Liang-Barsky Line Clipping (3-input mode)");
+
+    initGL();
+    glutDisplayFunc(display);
+
+    glutMainLoop();
+    return 0;
+}
