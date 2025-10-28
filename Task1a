@@ -1,0 +1,127 @@
+#ifdef __APPLE__
+    #include <GLUT/glut.h>
+#else
+    #include <GL/glut.h>
+#endif
+
+#include <iostream>
+#include <cmath>
+using namespace std;
+
+
+int x1_user, y1_user;
+int x2_user, y2_user;
+
+const int WINDOW_W = 640;
+const int WINDOW_H = 480;
+
+
+void putPixel(int x, int y)
+{
+    glBegin(GL_POINTS);
+    glVertex2i(x, y);
+    glEnd();
+}
+
+
+void bresenhamLine(int x1, int y1, int x2, int y2)
+{
+    int dx = abs(x2 - x1);
+    int dy = abs(y2 - y1);
+
+
+    int sx = (x1 < x2) ? 1 : -1;
+    int sy = (y1 < y2) ? 1 : -1;
+
+    bool steep = (dy > dx);
+
+    int err = (steep ? 2*dx - dy : 2*dy - dx);
+
+    int x = x1;
+    int y = y1;
+
+    int steps = steep ? dy : dx;
+
+    for (int i = 0; i <= steps; i++)
+    {
+
+        putPixel(x, y);
+
+        if (!steep)
+        {
+
+            if (err > 0)
+            {
+                y += sy;
+                err -= 2*dx;
+            }
+            err += 2*dy;
+            x += sx;
+        }
+        else
+        {
+
+            if (err > 0)
+            {
+                x += sx;
+                err -= 2*dy;
+            }
+            err += 2*dx;
+            y += sy;
+        }
+    }
+}
+
+
+void display()
+{
+    glClear(GL_COLOR_BUFFER_BIT);
+
+
+    glColor3f(1.0f, 1.0f, 1.0f); //
+    bresenhamLine(x1_user, y1_user, x2_user, y2_user);
+
+    glFlush();
+}
+
+
+void init()
+{
+    glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+    glColor3f(1.0f, 1.0f, 1.0f);
+    glPointSize(2.0f);
+
+    glMatrixMode(GL_PROJECTION);
+    glLoadIdentity();
+
+
+    gluOrtho2D(0.0, WINDOW_W, 0.0, WINDOW_H);
+}
+
+
+int main(int argc, char** argv)
+{
+
+    cout << "Enter x1 y1: ";
+    cin  >> x1_user >> y1_user;
+
+    cout << "Enter x2 y2: ";
+    cin  >> x2_user >> y2_user;
+
+
+    glutInit(&argc, argv);
+    glutInitDisplayMode(GLUT_SINGLE | GLUT_RGB);
+    glutInitWindowSize(WINDOW_W, WINDOW_H);
+    glutInitWindowPosition(100, 100);
+    glutCreateWindow("Bresenham Line Drawing - All Slopes");
+
+    init();
+
+
+    glutDisplayFunc(display);
+
+
+    glutMainLoop();
+
+    return 0;
+}
