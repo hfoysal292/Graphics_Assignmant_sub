@@ -1,0 +1,208 @@
+#ifdef __APPLE__
+    #include <GLUT/glut.h>
+#else
+    #include <GL/glut.h>
+#endif
+
+#include <iostream>
+#include <cmath>
+using namespace std;
+
+
+const int WINDOW_W = 800;
+const int WINDOW_H = 600;
+
+
+int centerX         = 400;
+int centerY         = 300;
+
+int numCircles      = 5;
+int startRadius     = 20;
+int radiusStep      = 15;
+
+int startThickness  = 2;
+int thicknessStep   = 2;
+
+float rStart = 1.0f, gStart = 0.0f, bStart = 0.0f;
+float rEnd   = 0.0f, gEnd   = 0.0f, bEnd   = 1.0f;
+
+
+inline void putPixel(int x, int y)
+{
+    glVertex2i(x, y);
+}
+
+
+
+void plotCirclePoints(int cx, int cy, int x, int y)
+{
+    putPixel(cx + x, cy + y);
+    putPixel(cx - x, cy + y);
+    putPixel(cx + x, cy - y);
+    putPixel(cx - x, cy - y);
+
+    putPixel(cx + y, cy + x);
+    putPixel(cx - y, cy + x);
+    putPixel(cx + y, cy - x);
+    putPixel(cx - y, cy - x);
+}
+
+
+
+void drawThinCircle(int cx, int cy, int R)
+{
+    int x = 0;
+    int y = R;
+    int d = 1 - R;
+
+    plotCirclePoints(cx, cy, x, y);
+
+    while (x < y)
+    {
+        if (d < 0)
+        {
+
+            d += 2 * x + 3;
+        }
+        else
+        {
+
+            d += 2 * (x - y) + 5;
+            y--;
+        }
+        x++;
+
+        plotCirclePoints(cx, cy, x, y);
+    }
+}
+
+
+void drawThickCircle(int cx, int cy, int baseRadius, int thickness)
+{
+    int maxR = baseRadius + thickness - 1;
+    for (int r = baseRadius; r <= maxR; r++)
+    {
+        drawThinCircle(cx, cy, r);
+    }
+}
+
+
+
+
+void setCircleColor(int i)
+{
+    float t;
+    if (numCircles <= 1)
+        t = 0.0f;
+    else
+        t = (float)i / (float)(numCircles - 1);
+
+    float r = rStart * (1.0f - t) + rEnd * t;
+    float g = gStart * (1.0f - t) + gEnd * t;
+    float b = bStart * (1.0f - t) + bEnd * t;
+
+    glColor3f(r, g, b);
+}
+
+
+
+void display()
+{
+    glClear(GL_COLOR_BUFFER_BIT);
+
+    glBegin(GL_POINTS);
+
+    for (int i = 0; i < numCircles; i++)
+    {
+
+        int R  = startRadius    + i * radiusStep;
+        int Th = startThickness + i * thicknessStep;
+        if (Th < 1) Th = 1;
+
+        setCircleColor(i);
+
+
+        drawThickCircle(centerX, centerY, R, Th);
+    }
+
+    glEnd();
+
+    glFlush();
+}
+
+
+
+void initGL()
+{
+
+    glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+
+
+    glMatrixMode(GL_PROJECTION);
+    glLoadIdentity();
+    gluOrtho2D(0, WINDOW_W, 0, WINDOW_H);
+
+
+    glPointSize(1.0f);
+}
+
+
+
+int main(int argc, char** argv)
+{
+    cout << "========== Concentric Circle Generator ==========\n";
+    cout << "Window size is " << WINDOW_W << " x " << WINDOW_H << "\n";
+    cout << "Coordinate origin (0,0) is bottom-left corner.\n\n";
+
+    cout << "Enter center X (e.g. 400): ";
+    cin  >> centerX;
+    cout << "Enter center Y (e.g. 300): ";
+    cin  >> centerY;
+
+    cout << "Enter number of circles (e.g. 10): ";
+    cin  >> numCircles;
+
+    cout << "Enter starting radius (e.g. 20): ";
+    cin  >> startRadius;
+    cout << "Enter radius step per circle (e.g. 15): ";
+    cin  >> radiusStep;
+
+    cout << "Enter starting thickness (pixels) (e.g. 2): ";
+    cin  >> startThickness;
+    cout << "Enter thickness step per circle (e.g. 1): ";
+    cin  >> thicknessStep;
+
+    cout << "Enter INNER color RGB (0.0 to 1.0 each), e.g. 1 0 0 for red:\n";
+    cout << "  R_start: ";
+    cin  >> rStart;
+    cout << "  G_start: ";
+    cin  >> gStart;
+    cout << "  B_start: ";
+    cin  >> bStart;
+
+    cout << "Enter OUTER color RGB (0.0 to 1.0 each), e.g. 0 0 1 for blue:\n";
+    cout << "  R_end:   ";
+    cin  >> rEnd;
+    cout << "  G_end:   ";
+    cin  >> gEnd;
+    cout << "  B_end:   ";
+    cin  >> bEnd;
+
+
+    if (numCircles < 1) numCircles = 1;
+    if (startRadius < 1) startRadius = 1;
+    if (startThickness < 1) startThickness = 1;
+
+    glutInit(&argc, argv);
+    glutInitDisplayMode(GLUT_SINGLE | GLUT_RGB);
+    glutInitWindowSize(WINDOW_W, WINDOW_H);
+    glutInitWindowPosition(100, 100);
+    glutCreateWindow("Concentric Circles with Thickness + Color Gradient");
+
+    initGL();
+
+    glutDisplayFunc(display);
+
+    glutMainLoop();
+    return 0;
+}
